@@ -1,0 +1,42 @@
+ecosys_forcing_mod.F90 contains one DOCriv_refract that will be modified 
+
+REGIONAL_MASK contains values representing oceans and seas
+0 'land'
+1 'Southern Ocean 2 'Pacific Ocean 3 'Indian Ocean -4 'Persian Gulf -5 'Red Sea 6 'Atlantic Ocean 
+7 'Mediterranean Sea 8 'Labrador Sea 9 'GIN Sea 10 'Arctic Ocean 11 'Hudson Bay -12 'Baltic Sea 
+-13 'Black Sea -14 'Caspian Sea 
+
+actual DOCriv_refract is 0.36 for Indian, 0.26 for Atlantic, and 0.35 for Arctic, the rest can be left as 0.2
+
+
+•	                 select case (REGION_MASK(i,j,iblock))
+•	                                case (1)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Southern Ocean
+•	                                case (2)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Pacific Ocean
+•	                                case (3)
+•	                                   DOCriv_refract(i,j,iblock) = 0.36_r8   ! Indian Ocean
+•	                                case (-4)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Persian Gulf
+•	                                case (-5)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Red Sea
+•	                                case (6)
+•	                                   DOCriv_refract(i,j,iblock) = 0.26_r8   ! Atlantic Ocean
+•	                                case (7)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Mediterranean Sea
+•	                                case (8)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Labrador Sea
+•	                                case (9)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! GIN Sea
+•	                                case (10)
+•	                                   DOCriv_refract(i,j,iblock) = 0.35_r8   ! Arctic Ocean
+•	                                case (11)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Hudson Bay
+•	                                case (-12)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Baltic Sea
+•	                                case (-13)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Black Sea
+•	                                case (-14)
+•	                                   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Caspian Sea
+•	                    case default
+•	                               DOCriv_refract(i,j,iblock) = 0.20_r8   ! Fallback/Land points
