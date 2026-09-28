@@ -53,6 +53,9 @@ module ecosys_forcing_mod
   public :: ecosys_forcing_set_interior_time_varying_forcing_data
   public :: ecosys_forcing_tracer_ref_val
 
+  ! Spatially varying river refractory DOC fraction
+  real(r8), allocatable, public :: DOCriv_refract(:,:,:)
+
   !*****************************************************************************
 
   type, private :: forcing_constant_type
@@ -328,6 +331,8 @@ contains
 
     use ecosys_forcing_saved_state_mod, only : lbox_atm_co2, box_atm_co2_init_val
 
+	  use grid, only: REGION_MASK
+
     logical,                         intent(in)    :: ciso_on
     logical,                         intent(in)    :: land_mask(:,:,:)
     type(marbl_forcing_fields_type), intent(in)    :: marbl_req_surface_flux_forcings(:)
@@ -344,7 +349,7 @@ contains
     character(char_len)      :: marbl_varname, tracer_name, units
     integer (int_kind)       :: nml_error                  ! error flag for nml read
     character(char_len_long) :: ioerror_msg
-    integer                  :: m, n
+    integer                  :: i, j, m, n, iblock
     type(forcing_monthly_every_ts), pointer :: file_details
     logical                  :: var_processed
 
@@ -595,6 +600,57 @@ contains
     call get_timer(ecosys_riv_flux_strdata_advance_timer, 'ecosys_riv_flux_strdata_advance', 1, distrb_clinic%nprocs)
     call get_timer(ecosys_surface_strdata_advance_timer , 'ecosys_surface_strdata_advance' , 1, distrb_clinic%nprocs)
     call get_timer(ecosys_interior_strdata_advance_timer, 'ecosys_interior_strdata_advance', 1, distrb_clinic%nprocs)
+
+    !--------------------------------------------------------------------------
+    !  Allocate and partition DOCriv_refract based on regional mask
+    !--------------------------------------------------------------------------
+    allocate(DOCriv_refract(nx_block, ny_block, nblocks_clinic))
+    DOCriv_refract = 0.2_r8
+
+  	do iblock = 1, nblocks_clinic
+     		do j = 1, ny_block
+        		do i = 1, nx_block
+  
+           	select case (REGION_MASK(i,j,iblock))
+  				case (1)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Southern Ocean
+  				case (2)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Pacific Ocean
+  				case (3)
+  				   DOCriv_refract(i,j,iblock) = 0.37_r8   ! Indian Ocean
+  				case (-4)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Persian Gulf
+  				case (-5)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Red Sea
+  				case (6)
+  				   DOCriv_refract(i,j,iblock) = 0.14_r8   ! Atlantic Ocean
+  				case (7)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Mediterranean Sea
+  				case (8)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Labrador Sea
+  				case (9)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! GIN Sea
+  				case (10)
+  				   DOCriv_refract(i,j,iblock) = 0.33_r8   ! Arctic Ocean
+  				case (11)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Hudson Bay
+  				case (-12)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Baltic Sea
+  				case (-13)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Black Sea
+  				case (-14)
+  				   DOCriv_refract(i,j,iblock) = 0.20_r8   ! Caspian Sea
+              	case default
+                 		DOCriv_refract(i,j,iblock) = 0.20_r8   ! Fallback/Land points
+           		end select
+  
+        		end do
+     		end do
+  
+     		if (my_task == master_task .and. iblock == 1) then
+        		write(stdout,*) 'Diagnostic DOCriv_refract (1,1,1): ', DOCriv_refract(1,1,1)
+     		endif
+  	end do
 
     !--------------------------------------------------------------------------
     !  River flux forcing
@@ -2084,7 +2140,7 @@ contains
     integer (int_kind) :: processed_field_cnt
     real (r8)          :: conv_factor
 
-    real (r8), parameter :: DOCriv_refract = 0.2_r8
+#    real (r8), parameter :: DOCriv_refract = 0.2_r8
     real (r8), parameter :: DONriv_refract = 0.1_r8
     real (r8), parameter :: DOPriv_refract = 0.025_r8
 
@@ -2176,8 +2232,8 @@ contains
     riv_flux_ind = doc_riv_flux_ind
     if (riv_flux_ind > 0) then
       processed_field_cnt   = processed_field_cnt + 1
-      stf_riv(:,:,doc_ind)  = (c1 - DOCriv_refract) * riv_flux_forcing_fields(riv_flux_ind)%field_0d(:,:,iblock)
-      stf_riv(:,:,docr_ind) =       DOCriv_refract  * riv_flux_forcing_fields(riv_flux_ind)%field_0d(:,:,iblock)
+      stf_riv(:,:,doc_ind)  = (c1 - DOCriv_refract(:,:,iblock)) * riv_flux_forcing_fields(riv_flux_ind)%field_0d(:,:,iblock)
+      stf_riv(:,:,docr_ind) =       DOCriv_refract(:,:,iblock)  * riv_flux_forcing_fields(riv_flux_ind)%field_0d(:,:,iblock)
 
       if (ciso_on) then
         conv_factor = (-27.6_r8 * p001 + c1) * R13C_std
