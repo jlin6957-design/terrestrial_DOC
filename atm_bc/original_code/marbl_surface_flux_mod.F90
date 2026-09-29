@@ -130,6 +130,7 @@ contains
          u10_sqr      => surface_flux_forcings(surface_flux_forcing_ind%u10_sqr_id)%field_0d,      &
          dust_flux_in => surface_flux_forcings(surface_flux_forcing_ind%dust_flux_id)%field_0d,    &
          iron_flux_in => surface_flux_forcings(surface_flux_forcing_ind%iron_flux_id)%field_0d,    &
+         blackcarbon_flux_in => surface_flux_forcings(surface_flux_forcing_ind%blackcarbon_flux_id)%field_0d, &
          nox_flux     => surface_flux_forcings(surface_flux_forcing_ind%nox_flux_id)%field_0d,     &
          nhy_flux     => surface_flux_forcings(surface_flux_forcing_ind%nhy_flux_id)%field_0d,     &
 
@@ -162,6 +163,7 @@ contains
          fe_ind            => marbl_tracer_indices%fe_ind,                                      &
          o2_ind            => marbl_tracer_indices%o2_ind,                                      &
          dic_ind           => marbl_tracer_indices%dic_ind,                                     &
+         docr_ind          => marbl_tracer_indices%docr_ind,                                    &
          dic_alt_co2_ind   => marbl_tracer_indices%dic_alt_co2_ind,                             &
          alk_ind           => marbl_tracer_indices%alk_ind,                                     &
          alk_alt_co2_ind   => marbl_tracer_indices%alk_alt_co2_ind                              &
@@ -386,6 +388,9 @@ contains
     !-----------------------------------------------------------------------
 
     surface_fluxes(:, fe_ind) = surface_fluxes(:, fe_ind) + iron_flux_in(:)
+
+    ! Add atmospheric plus sea-ice black carbon to refractory DOC.
+    surface_fluxes(:, docr_ind) = surface_fluxes(:, docr_ind) + blackcarbon_flux_in(:)
 
     !-----------------------------------------------------------------------
     !  Add phosphate and silicate from dust after Krishnamurthy et al. (2010)
