@@ -45,7 +45,8 @@
    use cvmix_kpp
    use cvmix_math
    use shr_sys_mod
-   use forcing_fields, only: LAMULT, LASL
+   !QL, 150526, forcing from wav
+   use forcing_fields, only: LAMULT, USTOKES, VSTOKES
 
    implicit none
    private
@@ -300,6 +301,13 @@
       lhoriz_varying_bckgrnd,  &
       larctic_bckgrnd_vdc  ! historically only used as a suboption of lniw_mixing
 
+   ! QL, 150611, local flag for applying langmuir enhancement factor and 
+   ! enhanced entrainment in CVMix
+   logical (log_kind) ::  &
+      llangmuir_efactor,  & ! applying Langmuir enhancement factor
+      lenhanced_entrainment ! accounting for Stokes shear in the bulk 
+                            ! Richardson number
+
    namelist /vmix_kpp_nml/bckgrnd_vdc1, bckgrnd_vdc2,           &
                           bckgrnd_vdc_eq, bckgrnd_vdc_psim,     &
                           bckgrnd_vdc_ban,                      &
@@ -322,9 +330,6 @@
 
    character (char_len) :: &
       string, string2
-
-   character (char_len) :: &
-      langmuir_mixing_opt, langmuir_entrainment_opt
 
 !-----------------------------------------------------------------------
 !
@@ -398,21 +403,22 @@
       write(stdout,fmt_log ) '  use CVMix KPP routines    =', lcvmix
 
       select case (langmuir_opt)
+      ! QL, 150612, set llangmuir_efactor and lenhanced_entrainment based on langmuir_opt 
       case ('null')
-         write(stdout,'(a38)') '   no Lanmguir turbulence parameterization'
-         langmuir_mixing_opt      = 'NONE'
-         langmuir_entrainment_opt = 'NONE'
+         write(stdout,'(a38)') '   no Lanmguir mixing parameterization'
+         llangmuir_efactor      = .false.
+         lenhanced_entrainment  = .false.
       case ('vr12-ma')
          write(stdout,'(a38)') '   Langmuir param. option: vr12-ma    '
-         langmuir_mixing_opt      = 'LWF16'
-         langmuir_entrainment_opt = 'LWF16'
-      case ('lf17')
-         write(stdout,'(a38)') '   Langmuir param. option: lf17       '
-         langmuir_mixing_opt      = 'LWF16'
-         langmuir_entrainment_opt = 'LF17'
+         llangmuir_efactor      = .true.
+         lenhanced_entrainment  = .false.
+      case ('vr12-en')
+         write(stdout,'(a38)') '   Langmuir param. option: vr12-en    '
+         llangmuir_efactor      = .true.
+         lenhanced_entrainment  = .true.
       case default
-         write(string, "(3A)") "Error: '", trim(langmuir_opt), "' is not a valid option for Langmuir turbulence parameterization"
-         call exit_POP(sigAbort, string)
+         llangmuir_efactor      = .false.
+         lenhanced_entrainment  = .false.
       end select
 
    endif
@@ -436,8 +442,10 @@
    call broadcast_scalar(linertial,             master_task)
    call broadcast_scalar(lcvmix,                master_task)
    call broadcast_scalar(langmuir_opt,          master_task)
-   call broadcast_scalar(langmuir_mixing_opt,   master_task)
-   call broadcast_scalar(langmuir_entrainment_opt, master_task)
+   ! QL, 150708, broadcast llangmuir_efactor and lenhanced_entrainment
+   ! from the master_task processor to all other processors
+   call broadcast_scalar(llangmuir_efactor,     master_task)
+   call broadcast_scalar(lenhanced_entrainment, master_task)
 
    if (lcvmix) call register_string('lcvmix')
 
@@ -593,13 +601,13 @@
       ! Arctic
       !----------------
 
-   !   if (larctic_bckgrnd_vdc) then   ! historically only used as a suboption of lniw_mixing
+      if (larctic_bckgrnd_vdc) then   ! historically only used as a suboption of lniw_mixing
 
-   !   if (TLATD(i,j,iblock)  .ge. 70.0_r8) .and. (k .lt. 20.0_r8) then
-   !      bckgrnd_vdc(i,j,k,iblock) = 0.25
-   !   endif
+      if (TLATD(i,j,iblock)  .ge. 70.0_r8) then
+         bckgrnd_vdc(i,j,k,iblock) = bckgrnd_vdc_eq
+      endif
 
-   !   endif
+      endif
 
       bckgrnd_vvc(i,j,k,iblock) = Prandtl*bckgrnd_vdc(i,j,k,iblock)
 
@@ -774,13 +782,14 @@
                            KPP_Ri_zero=Riinfty,                               &
                            KPP_exp=real(3,r8))
 
+     ! QL, 150611, pass llangmuir_efactor and lenhanced_entrainment to CVMix
      call cvmix_init_kpp(lEkman=lcheckekmo,                                   &
                          lMonOb=lcheckekmo,                                   &
                          surf_layer_ext = epssfc,                             &
                          minVtsqr=c0,                                         &
                          lnoDGat1=.false.,                                    &
-                         langmuir_mixing_str=langmuir_mixing_opt,             &
-                         langmuir_entrainment_str=langmuir_entrainment_opt,   &
+                         llangmuirEF=llangmuir_efactor,                       &
+                         lenhanced_entr=lenhanced_entrainment,                &
                          MatchTechnique="MatchBoth")
      call cvmix_put_kpp("a_m", a_m)
      call cvmix_put_kpp("a_s", a_s)
@@ -861,7 +870,7 @@
                  !--------------------------------------------------------------
                  ! form the time-invariant part of Schmittner coefficient term
                  !--------------------------------------------------------------
-                 call cvmix_compute_socn_tidal_invariant(CVmix_vars(ic,bid))
+                 call cvmix_compute_socn_tidal_invariant(CVmix_vars(ic,bid)), & (Vmix_params)
                case (tidal_mixing_method_schmittner)
                  !--------------------------------------------------------------
                  ! form the time-invariant part of Schmittner coefficient term
@@ -873,13 +882,13 @@
                  ! which is formed from summing q_i*TidalConstituent_i over
                  ! the number of constituents.
                  !--------------------------------------------------------------
-                 call cvmix_compute_SchmittnerCoeff(CVmix_vars(ic,bid),                &
+                 call cvmix_compute_SchmittnerCoeff(CVmix_vars(ic,bid), CVmix_params,  &
                                                     nlev,                              &
                                                     TIDAL_QE_3D(inx,jny,:,bid)/c1000)
                  !-----------------------------------------------------------------------
                  ! form the time-invariant part of the Schmittner coefficient term
                  !-----------------------------------------------------------------------
-                 call cvmix_compute_socn_tidal_invariant(CVmix_vars(ic,bid))
+                 call cvmix_compute_socn_tidal_invariant(CVmix_vars(ic,bid)), & (Vmix_params)
               end select
              end if
            end if
@@ -1753,7 +1762,7 @@
                else if (luse_schmittner) then
                !*** compute tidal diffusion
                  if (ltidal_lunar_cycle) then
-                  call cvmix_compute_SchmittnerCoeff(CVmix_vars(ic), nlev, &
+                  call cvmix_compute_SchmittnerCoeff(CVmix_vars(ic), CVmix_params, nlev, &
                                                      TIDAL_QE_3D(i,j,:,bid)/c1000)
                  endif
                  call cvmix_coeffs_tidal(CVmix_vars(ic), &
@@ -2550,6 +2559,7 @@
 
       SIGMA = epssfc
 
+      ! QL, 150706, calculate WS with CVMix if lcvmix is true
       if (lcvmix) then
         do j = 1,ny_block
           do i = 1,nx_block
@@ -2557,6 +2567,7 @@
                         ZKL(i,j)*1e-2_r8,                &
                         BFSFC(i,j)*1e-4_r8,        &
                         USTAR(i,j)*1e-2_r8,          &
+                        langmuir_Efactor=LAMULT(i,j,bid),     &
                         w_s=WS(i,j))
             WS(i,j) = WS(i,j)*1e2_r8
           end do
@@ -2595,19 +2606,18 @@
           do i = 1,nx_block
             ic = (j-1)*nx_block + i
             if (kl.le.CVmix_vars(ic)%nlev) then
-              if (LASL(i,j,bid) > c0) then
-                ! only use Langmuir enhanced entrainment where LaSL has
-                ! a valid (positive) value.
+              WM(i,j:j) = cvmix_kpp_compute_unresolved_shear(                 &
+                          zt_cntr = (/zgrid(kl)/)*1e-2_r8,                    &
+                          ws_cntr = (/WS(i,j)/)*1e-2_r8,                      &
+                          N_iface = (/B_FRQNCY(i,j), B_FRQNCY(i,j)/))*1e4_r8
+              ! QL, 150611, pass in stokes_drift
                 RI_BULK(i,j,kdn:kdn) = cvmix_kpp_compute_bulk_Richardson(     &
                             zt_cntr = (/zgrid(kl)/)*1e-2_r8,                  &
-                            ws_cntr = (/WS(i,j)/)*1e-2_r8,                    &
                             delta_buoy_cntr = (/DBSFC(i,j,kl)/)*1e-2_r8,      &
                             delta_Vsqr_cntr = (/VSHEAR(i,j)/)*1e-4_r8,        &
-                            N_iface = (/B_FRQNCY(i,j), B_FRQNCY(i,j)/),       &
-                            EFactor = LAMULT(i,j,bid),                        &
-                            LaSL = LASL(i,j,bid),                             &
-                            bfsfc = BFSFC(i,j)*1e-4_r8,                       &
-                            ustar = USTAR(i,j)*1e-2_r8)
+                            Vt_sqr_cntr = (/WM(i,j)/)*1e-4_r8,                  &
+                           stokes_drift =                                       &
+                            sqrt(USTOKES(i,j,bid)**2+VSTOKES(i,j,bid)**2))
               else
                 ! otherwise use the original formula of the unresolved shear
                 ! by setting bfsfc to zero, as the new formula is only used
@@ -2972,8 +2982,10 @@
            CVmix_vars(ic)%kOBL_depth = real(KBL(i,j),r8)+p5*(p5-CASEA(i,j))
            CVmix_vars(ic)%SurfaceFriction = USTAR(i,j)*1e-2_r8
            CVmix_vars(ic)%SurfaceBuoyancyForcing = BFSFC(i,j)*1e-4_r8
+           ! QL, 150612, set langmuir enhancement factor and stokes drift
            CVmix_vars(ic)%LangmuirEnhancementFactor = LAMULT(i,j,bid)
-
+           CVmix_vars(ic)%SurfaceStokesDrift =   &
+                            sqrt(USTOKES(i,j,bid)**2+VSTOKES(i,j,bid)**2)
            call cvmix_coeffs_kpp(CVmix_vars(ic))
 
            ! Unpack CVMix data type (convert from mks to cgs)
