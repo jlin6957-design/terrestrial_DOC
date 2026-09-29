@@ -1366,6 +1366,9 @@
 <iron_flux_source>driver-derived</iron_flux_source>
 <iron_flux_source ocn_coupling="partial" ocn_bgc_config="cesm2.0">monthly-calendar</iron_flux_source>
 
+<!-- Black carbon deposition is derived from atmosphere- and sea-ice-derived BC fluxes. -->
+<blackcarbonflux_source>driver-derived</blackcarbonflux_source>
+
 <dust_ratio_thres>55.0</dust_ratio_thres>
 <dust_ratio_thres ocn_bgc_config="cesm2.0">60.0</dust_ratio_thres>
 <dust_ratio_thres ocn_coupling="partial">66.2818</dust_ratio_thres>
@@ -1389,6 +1392,12 @@
 <iron_flux_input%scale_factor ocn_grid="gx1v6">1.79e6</iron_flux_input%scale_factor>
 <iron_flux_input%scale_factor ocn_grid="gx1v7">1.79e6</iron_flux_input%scale_factor>
 
+<!-- Used only when blackcarbonflux_source is set to monthly-calendar. -->
+<!-- No filename is supplied because the default pathway is driver-derived. -->
+<blackcarbonflux_input%file_fmt>nc</blackcarbonflux_input%file_fmt>
+<blackcarbonflux_input%file_varname>blackcarbonflux</blackcarbonflux_input%file_varname>
+<blackcarbonflux_input%scale_factor>1.0</blackcarbonflux_input%scale_factor>
+  
 <fesedflux_input%filename ocn_grid="gx3v7">ocn/pop/gx3v7/forcing/fesedflux_gx3v7_cesm1_97_2017.nc</fesedflux_input%filename>
 <fesedflux_input%filename ocn_grid="gx1v6">ocn/pop/gx1v6/forcing/fesedfluxTot_gx1v6_cesm2_2018_c180618.nc</fesedflux_input%filename>
 <fesedflux_input%filename ocn_grid="gx1v7">ocn/pop/gx1v6/forcing/fesedfluxTot_gx1v6_cesm2_2018_c180618.nc</fesedflux_input%filename>
