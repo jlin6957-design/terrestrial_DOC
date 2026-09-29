@@ -1537,6 +1537,23 @@ if ($ecosys_on eq "TRUE") {
   add_default($nl, 'iron_flux_input%file_varname');
   add_default($nl, 'iron_flux_input%scale_factor');  # kg/m^2/sec -> nmol/cm^2/sec, 3.5% iron by weight
 
+  # Black carbon surface forcing: atmospheric BC + sea-ice BC.
+  # The default driver-derived option uses coupler fields and requires no input file.
+  # Monthly-calendar input settings are added only when that source is selected.
+  add_default($nl, 'blackcarbonflux_source');
+  my $blackcarbonflux_source = $nl->get_value('blackcarbonflux_source');
+  # Need to strip the quotes
+  $blackcarbonflux_source =~ s/['"]//g;
+  if ($blackcarbonflux_source eq "monthly-calendar") {
+    add_default($nl, 'blackcarbonflux_input%filename');
+    add_default($nl, 'blackcarbonflux_input%file_fmt');
+    add_default($nl, 'blackcarbonflux_input%file_varname');
+    add_default($nl, 'blackcarbonflux_input%scale_factor');
+  } elsif ($blackcarbonflux_source ne "driver-derived") {
+    print " blackcarbonflux_source=$blackcarbonflux_source not supported by ecosys module\n";
+    die;
+  }
+
   add_default($nl, 'fesedflux_input%filename');
   add_default($nl, 'fesedflux_input%file_varname');
   add_default($nl, 'fesedflux_input%file_fmt');
