@@ -5982,6 +5982,23 @@ Default: 'driver-derived'
 </entry>
 
 <entry
+id="blackcarbonflux_source"
+type="char*256"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml"
+valid_values="monthly-calendar,driver-derived" >
+Selects the source of the black carbon surface flux.
+
+'driver-derived' sums the atmospheric and sea-ice black carbon fluxes supplied
+by the coupler and converts the result from g C/cm^2/s to nmol C/cm^2/s.
+
+'monthly-calendar' reads a gridded monthly black carbon flux through
+blackcarbonflux_input.
+
+Default: 'driver-derived'
+</entry>
+	
+<entry
 id="dust_ratio_thres"
 type="real"
 category="Forcing (Ecosystem)"
@@ -6052,6 +6069,62 @@ group="ecosys_forcing_data_nml" >
 Default: none provided
 </entry>
 
+<entry
+id="blackcarbonflux_input%filename"
+type="char*256"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml"
+input_pathname="abs" >
+Monthly black carbon surface-flux input file used only when
+blackcarbonflux_source is 'monthly-calendar'.
+
+The file data, after applying blackcarbonflux_input%scale_factor, must have
+units of nmol C/cm^2/s.
+
+Default: none provided
+</entry>
+
+<entry
+id="blackcarbonflux_input%file_fmt"
+type="char*256"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml" >
+Format of blackcarbonflux_input%filename.
+
+Default: 'nc'
+</entry>
+
+<entry
+id="blackcarbonflux_input%file_varname"
+type="char*256"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml" >
+Name of the black carbon flux variable in blackcarbonflux_input%filename.
+
+Default: 'blackcarbonflux'
+</entry>
+
+<entry
+id="blackcarbonflux_input%scale_factor"
+type="real"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml" >
+Scale factor applied to the monthly black carbon flux input. Use 1.0 when the
+input variable is already in nmol C/cm^2/s.
+
+Default: 1.0
+</entry>
+
+<entry
+id="blackcarbonflux_input%default_val"
+type="real"
+category="Forcing (Ecosystem)"
+group="ecosys_forcing_data_nml" >
+Fallback value for the monthly black carbon flux input.
+
+Default: none provided
+</entry>
+	
 <entry
 id="fesedflux_input%filename"
 type="char*256"
