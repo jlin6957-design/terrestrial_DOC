@@ -1155,7 +1155,7 @@
          bid                 ! local block address for this sub block
 
       real (r8) :: &
-         fz, dz_bottom, factor
+         fz, dz_bottom, mixisop, factor
 
       real (r8), dimension(nx_block,ny_block) :: &
          CX, CY,                  &
@@ -1365,6 +1365,66 @@
             enddo
           enddo
         endif
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! jkm mods
+
+        KAPPA_ISOP(:,:,:,:,bid) = KAPPA_ISOP(:,:,:,:,bid) * 2.5_r8
+
+mixisop = 5.5e8_r8
+
+      do i = 1,nx_block
+        do j = 1,ny_block
+
+
+         if ((TLATD(i,j,bid) .ge. 3.0_r8) .and. (TLATD(i,j,bid) .lt. 9.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 165.0_r8) .and. &
+                   (TLOND(i,j,bid) .lt. 266.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+          if ((TLATD(i,j,bid) .ge. 0.0_r8) .and. (TLATD(i,j,bid) .lt. 6.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 264.0_r8) .and. &
+                   (TLOND(i,j,bid) .lt. 276.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+          if ((TLATD(i,j,bid) .ge. -3.0_r8) .and. (TLATD(i,j,bid) .lt. 3.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 180.0_r8) .and. &
+                   (TLOND(i,j,bid) .lt. 268.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+          if ((TLATD(i,j,bid) .ge. -9.0_r8) .and. (TLATD(i,j,bid) .lt. -3.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 195.0_r8) .and. &
+                   (TLOND(i,j,bid) .lt. 268.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+
+
+           if ((TLATD(i,j,bid) .ge. 0.0_r8) .and. (TLATD(i,j,bid) .lt. 3.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 328.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+           if ((TLATD(i,j,bid) .ge. -3.0_r8) .and. (TLATD(i,j,bid) .lt. 0.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 332.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+         if ((TLATD(i,j,bid) .ge. -9.0_r8) .and. (TLATD(i,j,bid) .lt. -3.0_r8) &
+                   .and. (TLOND(i,j,bid) .ge. 335.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+
+         if ((TLATD(i,j,bid) .ge. -9.0_r8) .and. (TLATD(i,j,bid) .lt. -3.0_r8) &
+                   .and. (TLOND(i,j,bid) .le. 5.0_r8)) then
+             KAPPA_ISOP(i,j,:,23:43,bid) = mixisop
+          endif
+        enddo
+      enddo
+
+
+
+
+
+! JKM End mods
+!!!!!!!!!!!!!!!
+
 
         if ( .not. use_const_ah_bkg_srfbl )  &
           HOR_DIFF(:,:,ktp,k,bid) = KAPPA_ISOP(:,:,ktp,k,bid) 
