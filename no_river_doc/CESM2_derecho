@@ -1,0 +1,90 @@
+
+Run out of the box gx3v7 G1850ECOIAF_JRA case out 75 years
+
+
+
+
+
+
+***
+CURRENTLY SET FOR Derecho cesm 2.1.5
+  cycle NCEP 
+
+
+
+
+***
+
+
+export CASE=jsl.027
+export CESM_ROOT=/glade/work/jameslin/cesm2.1.5
+export SCRIPT_DIR_BASE=/glade/work/$USER/derecho_cases/
+
+cd $CESM_ROOT/cime/scripts 
+./create_newcase --case  $SCRIPT_DIR_BASE/$CASE --compset 1850_DATM%NYF_SLND_CICE_POP2%ECO_DROF%NYF_SGLC_SWAV --res T62_g37 --run-unsupported 
+
+cd $SCRIPT_DIR_BASE/$CASE 
+./xmlchange STOP_N=50,STOP_OPTION=nyears 
+./xmlchange --subgroup case.run JOB_WALLCLOCK_TIME=12:00:00
+./xmlchange RESUBMIT=9
+
+./xmlchange --file env_run.xml --id OCN_CO2_TYPE --val box_atm_co2
+
+
+# Debug settings
+#./xmlchange DEBUG=TRUE
+#./xmlchange INFO_DBUG=2
+#./xmlchange CHECK_TIMING=TRUE
+
+./xmlchange NTASKS_CPL=56,NTASKS_ATM=56,NTASKS_LND=56,NTASKS_ICE=56,NTASKS_ROF=56,NTASKS_GLC=56,NTASKS_WAV=56
+./xmlchange NTASKS_OCN=72,ROOTPE_OCN=56
+
+
+./case.setup
+
+cd /glade/work/jameslin/SourceCode_gx3v7
+
+cp ocn.base.tavg.csh.annual ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/ocn.base.tavg.csh
+cp user_nl_pop.annual.x3Feinputs ${SCRIPT_DIR_BASE}/${CASE}/user_nl_pop
+cp user_nl_cice.annual ${SCRIPT_DIR_BASE}/${CASE}/user_nl_cice
+cp user_nl_marbl_burial_p8poc ${SCRIPT_DIR_BASE}/${CASE}/user_nl_marbl
+cp hmix_gm_modified.F90 ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/hmix_gm.F90
+cp vmix_kpp_modified.F90 ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/vmix_kpp.F90
+cp ecosys_forcing_mod_norivDOC.F90 ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/ecosys_forcing_mod.F90
+
+cd $SCRIPT_DIR_BASE/$CASE 
+
+./preview_namelists
+
+# Make the diagnostics file case-specific.
+cp Buildconf/popconf/ecosys_diagnostics   SourceMods/src.pop/ecosys_diagnostics
+
+# Preserve the unmodified version.
+cp SourceMods/src.pop/ecosys_diagnostics \
+   SourceMods/src.pop/ecosys_diagnostics.original
+
+# Turn off only these two output diagnostics.
+sed -i \
+  -e 's/^[[:space:]]*DOC_RIV_FLUX[[:space:]]*:.*$/DOC_RIV_FLUX : never_average/' \
+  -e 's/^[[:space:]]*DOCr_RIV_FLUX[[:space:]]*:.*$/DOCr_RIV_FLUX : never_average/' \
+  SourceMods/src.pop/ecosys_diagnostics
+
+echo "Case-specific diagnostic settings:"
+grep -E '^(DOC_RIV_FLUX|DOCr_RIV_FLUX)[[:space:]]*:' \
+  SourceMods/src.pop/ecosys_diagnostics
+
+# Regenerate configuration from the edited SourceMods file.
+./preview_namelists
+
+echo "Generated Buildconf diagnostic settings:"
+grep -E '^(DOC_RIV_FLUX|DOCr_RIV_FLUX)[[:space:]]*:' \
+  Buildconf/popconf/ecosys_diagnostics
+
+################################
+# BUILD AND SUBMIT
+
+
+qcmd -- ./case.build
+
+
+./case.submit
