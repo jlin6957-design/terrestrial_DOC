@@ -1,8 +1,24 @@
 Uses no river DOC
   DOC_RIV_FLUX : never_average
-	DOCr_RIV_FLUX : never_average
+  DOCr_RIV_FLUX : never_average
 
-modify ecosys_forcing_mod.F90
+sed -i \
+  -e 's/^[[:space:]]*DOC_RIV_FLUX[[:space:]]*:.*$/DOC_RIV_FLUX : never_average/' \
+  -e 's/^[[:space:]]*DOCr_RIV_FLUX[[:space:]]*:.*$/DOCr_RIV_FLUX : never_average/' \
+  SourceMods/src.pop/ecosys_diagnostics
+
+
+modify ecosys_forcing_mod.F90 to turn off DOC and DOCr from rivers
+
+
+
+ecosys_forcing_mod.F90
+        ↓
+changes whether/how river DOC enters the model
+
+ecosys_diagnostics
+        ↓
+changes whether DOC_RIV_FLUX and DOCr_RIV_FLUX are averaged/output
 
 
 
