@@ -1,0 +1,30 @@
+Black carbon surface forcing: atmospheric BC + sea-ice BC.
+
+all deposited black carbon is treated as refractory dissolved organic carbon.
+
+ATM_BLACK_CARBON_FLUX is a sum of BCDEPWET,   BCPHIDRY, and BCPHODRY from the CESM coupler in kg/m^2/s and converted to g/cm^2/s using 0.1 and the active surface ocean mask (RCALCT). So no BC over land cells. 
+  The forcing file is from aerosoldep_WACCM.ensmean_monthly_hist_1849-2015_0.9x1.25_CMIP6_c180926.nc (sandbox/inputdata/atm/cam/chem/trop/aero)
+    cd sandbox/inputdata/atm/cam/chem/trop/aero
+    cd /glade/campaign/cesm/cesmdata/inputdata/atm/cam/chem/trop_mozart_aero/aero
+
+Atmospheric BC =  hydrophilic dry BC + hydrophobic dry BC  + hydrophilic wet BC
+
+In addition, black carbon from sea ice (SEAICE_BLACK_CARBON_FLUX) is the same calculation. But the bcpho and bcphi are calculated during the run and has no NC forcing file. 
+  Sea-ice BC = hydrophobic BC from sea ice + hydrophilic BC from sea ice
+Liu et al., 2012: The volume-mean size for BC and POM emissions is 0.134 µm diameter non-hygroscopic particle. Dissolved fraction is <0.2 µm. Thus, I partition all aerosol BC in the dissolved fraction for DOCr. Aerosol BC is DOCr because it is characterized as aromatic condensed material. https://gmd.copernicus.org/articles/5/709/2012/ 
+
+Summary: my code takes atmospheric and sea-ice BC deposition supplied by CESM, converts it to a carbon molar surface flux, 
+assumes all of that deposited BC carbon behaves as refractory dissolved organic carbon, 
+adds it directly to MARBL's DOCr surface flux, 
+and lets POP convert that surface flux into a first-layer volumetric DOCr tendency through its standard vertical tracer-flux divergence calculation; 
+a parallel 6%-Fe assumption adds BC-associated iron to the ocean Fe forcing.
+
+
+Modify files
+  ecosys_forcing_mod.F90
+  marbl_init_mod.F90				
+	marbl_interface_private_types.F90	
+	marbl_surface_flux_mod.F90 		
+	namelist_definition_pop.xml			
+	namelist_defaults_pop.xml		
+	build-namelist	
