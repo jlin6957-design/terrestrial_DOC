@@ -1,0 +1,107 @@
+
+Run of out of the box gx3v7 G1850ECOIAF case out 62 years
+
+
+
+
+
+
+***
+CURRENTLY SET FOR cesm 2.1.3
+  cycle NCEP 1948-2009
+
+module load anaconda
+
+
+conda activate climate-model-gcc-9.4
+
+tcsh
+
+setenv NETCDF /mnt/lustre/software/anaconda/colsa/envs/climate-model-gcc-9.4
+setenv NETCDF_PATH /mnt/lustre/software/anaconda/colsa/envs/climate-model-gcc-9.4
+rehash
+
+setenv USER                 jsl1063
+setenv CASE                 jsl2.029
+
+setenv SCRIPT_DIR_BASE /mnt/home/letscher/${USER}/cesm_runs
+cd /mnt/home/letscher/jsl1063/my_cesm_sandbox_def/cime/scripts
+
+
+./create_newcase --case ${SCRIPT_DIR_BASE}/${CASE} --res T62_g37 --compset 1850_DATM%NYF_SLND_CICE_POP2%ECO_DROF%NYF_SGLC_SWAV --mach premise --compiler gnu --run-unsupported
+cd ${SCRIPT_DIR_BASE}/${CASE}
+
+
+
+# for a 4 node run on premise nodes with 24 cores
+
+#./xmlchange --file env_mach_pes.xml NTASKS_ATM=1,NTASKS_LND=1,NTASKS_ROF=1,NTASKS_WAV=12,NTASKS_GLC=1,NTASKS_ESP=1,NTASKS_ICE=8,NTASKS_CPL=12,NTASKS_OCN=48
+#./xmlchange --file env_mach_pes.xml NTHRDS_ATM=1,NTHRDS_LND=1,NTHRDS_ROF=1,NTHRDS_WAV=1,NTHRDS_GLC=1,NTHRDS_ESP=1,NTHRDS_ICE=1,NTHRDS_CPL=1,NTHRDS_OCN=1
+#./xmlchange --file env_mach_pes.xml ROOTPE_WAV=56,ROOTPE_ICE=48,ROOTPE_CPL=68,ROOTPE_OCN=0
+#./xmlchange --file env_mach_pes.xml NINST_LAYOUT=concurrent
+#./xmlchange MAX_TASKS_PER_NODE=24
+#./xmlchange MAX_MPITASKS_PER_NODE=24
+
+# for a 1 node run. Each identical node on our cray has 128 cores 
+./xmlchange --file env_mach_pes.xml NTASKS_ATM=1,NTASKS_LND=1,NTASKS_ROF=1,NTASKS_WAV=14,NTASKS_GLC=1,NTASKS_ESP=1,NTASKS_ICE=10,NTASKS_CPL=27,NTASKS_OCN=72
+./xmlchange --file env_mach_pes.xml NTHRDS_ATM=1,NTHRDS_LND=1,NTHRDS_ROF=1,NTHRDS_WAV=1,NTHRDS_GLC=1,NTHRDS_ESP=1,NTHRDS_ICE=1,NTHRDS_CPL=1,NTHRDS_OCN=1
+./xmlchange --file env_mach_pes.xml ROOTPE_ATM=27,ROOTPE_LND=28,ROOTPE_ROF=29,ROOTPE_WAV=30,ROOTPE_GLC=44,ROOTPE_ESP=45,ROOTPE_ICE=46,ROOTPE_CPL=0,ROOTPE_OCN=56
+./xmlchange --file env_mach_pes.xml NINST_LAYOUT=concurrent
+./xmlchange MAX_TASKS_PER_NODE=128
+./xmlchange MAX_MPITASKS_PER_NODE=128
+
+
+./case.setup --reset
+
+
+
+cd /mnt/gpfs01/home/letscher/shared/SourceCode_gx3v7
+cp ocn.base.tavg.csh.annual ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/ocn.base.tavg.csh
+cp user_nl_pop.annual.x3Feinputs ${SCRIPT_DIR_BASE}/${CASE}/user_nl_pop
+cp user_nl_cice.annual ${SCRIPT_DIR_BASE}/${CASE}/user_nl_cice
+cp hmix_gm_modified.F90 ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/hmix_gm.F90
+cp vmix_kpp_modified.F90 ${SCRIPT_DIR_BASE}/${CASE}/SourceMods/src.pop/vmix_kpp.F90
+
+cd ${SCRIPT_DIR_BASE}/${CASE}
+
+
+# sftp STOP, manually copy over any edited MARBL file to ../$CASE/bld/ocn/source
+# modified interior_tendencies for 80yr DOMr photo-ox
+# STOP, manually copy over user_nl_MARBL file to ${SCRIPT_DIR_BASE}/${CASE}
+
+
+
+cd /mnt/gpfs01/home/letscher/jsl1063/cesm_runs/jsl2.029
+put user_nl_marbl
+chmod +774 user_nl_marbl
+
+
+#ssh
+
+./xmlchange --file env_run.xml --id OCN_CO2_TYPE --val box_atm_co2
+./xmlchange --file env_run.xml --id STOP_OPTION --val nmonth
+./xmlchange --file env_run.xml --id STOP_N      --val 600
+./xmlchange --file env_run.xml --id RESUBMIT    --val 1
+./xmlchange --file env_run.xml --id DOUT_S      --val TRUE
+
+
+
+#./case.build --clean
+./case.build
+
+./preview_run -a "--partition=physics --mem=500G"
+
+./case.submit -a "--partition=physics --mem=500G"
+
+
+
+exit
+
+
+
+
+
+# use this instead if you'd like an email sent to you at job start and end
+./case.submit -M begin,end
+
+./xmlchange --file env_run.xml --id CONTINUE_RUN --val FALSE
