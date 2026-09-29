@@ -381,6 +381,7 @@ module marbl_interface_private_types
      integer(int_kind) :: xco2_alt_co2_id      = 0
      integer(int_kind) :: dust_flux_id         = 0
      integer(int_kind) :: iron_flux_id         = 0
+     integer(int_kind) :: blackcarbon_flux_id  = 0
      integer(int_kind) :: nox_flux_id          = 0
      integer(int_kind) :: nhy_flux_id          = 0
      integer(int_kind) :: ext_C_flux_id        = 0
@@ -1625,6 +1626,10 @@ contains
       ! Iron Flux
       forcing_cnt = forcing_cnt + 1
       this%iron_flux_id = forcing_cnt
+
+      ! Black Carbon Flux
+      forcing_cnt = forcing_cnt + 1
+      this%blackcarbon_flux_id = forcing_cnt
 
       ! NOx Flux
       forcing_cnt = forcing_cnt + 1
