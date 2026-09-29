@@ -1116,8 +1116,8 @@ contains
     !--------------------------------------------------------------------------
     character(len=*), parameter :: subname = 'ecosys_forcing_mod:init_riv_flux_forcing_fields'
 
-    character(len=*), parameter :: riv_flux_components(9) = (/ &
-         'din', 'dip', 'don', 'dop', 'dsi', 'dfe', 'dic', 'alk', 'doc' /)
+    character(len=*), parameter :: riv_flux_components(8) = (/ &
+         'din', 'dip', 'don', 'dop', 'dsi', 'dfe', 'dic', 'alk'/)
 
     real(r8)            :: scale_factor
     character(char_len) :: file_varname, marbl_varname, units
