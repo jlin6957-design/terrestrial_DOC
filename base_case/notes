@@ -1,0 +1,35 @@
+The base case corrects for overly high photooxidation of DOCr that causes a negative bias in the deep ocean.
+
+Deep ocean O2 inventory is still bad, but we don't compute DOCr to O2 quotients in the deep ocean. 
+
+The optimized parameter changes from out of the box CESM2.1.3 include DOMr_reminR_photo= 80 yr (was 18 yrs), 
+parm_scalelen_vals = 0.8, 2.8, 3.6, 3.8 (was 1, 3.3, 4.2, 4.4), 
+kappa_isop*2.5, G1850NYR, ladjust_bury_coeff=true. 
+
+changes made include:
+
+marbl_settings_mod.F90: 
+  DOMr_reminR_photo = (c1/(365.0_r8*80.0_r8)) * dps       ! additional remin from photochemistry, 1/80yrs over top 10m
+
+user_nl_pop
+  modified FeSedflux inputs, dust flux inputs, iron flux inputs, feventflux inputs, and river dfe flux scale factor
+
+user_nl_marbl
+  ladjust_bury_coeff = .true.
+  parm_scalelen_vals = 0.8, 2.8, 3.6, 3.8
+
+hmix_gm.F90
+  Kappa_isop*2.5
+
+vmix_kpp_modified.F90
+  Bckgrnd_vdc (regional enhancements Sea of Japan, Bering Sea, Kuril region)
+
+G1850NYR
+  compset: 1850_DATM%NYF_SLND_CICE_POP2%ECO_DROF%NYF_SGLC_SWAV
+
+box_atm_co2
+  ./xmlchange --file env_run.xml --id OCN_CO2_TYPE --val box_atm_co2
+
+
+
+
