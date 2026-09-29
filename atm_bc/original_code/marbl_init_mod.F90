@@ -705,6 +705,13 @@ contains
           surface_flux_forcings(id)%metadata%field_units   = 'nmol/cm^2/s'
         end if
 
+        ! Black Carbon Flux
+        if (id .eq. ind%blackcarbon_flux_id) then
+          found = .true.
+          surface_flux_forcings(id)%metadata%varname       = 'Black Carbon Flux'
+          surface_flux_forcings(id)%metadata%field_units   = 'nmol/cm^2/s'
+        end if
+
         ! NOx Flux
         if (id .eq. ind%nox_flux_id) then
           found = .true.
