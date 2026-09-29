@@ -1,0 +1,8 @@
+Uses no river DOC
+  DOC_RIV_FLUX : never_average
+	DOCr_RIV_FLUX : never_average
+
+modify ecosys_forcing_mod.F90
+
+
+
