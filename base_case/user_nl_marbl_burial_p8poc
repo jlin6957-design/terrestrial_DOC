@@ -1,0 +1,11 @@
+!----------------------------------------------------------------------------------
+! To use non-default parameter values in MARBL
+! 1. Copy this file to $CASEROOT/
+! 2. Append lines of the form
+!        parmeter = value
+!    To the SourceMods version (note that '!' is treated as a comment)
+!----------------------------------------------------------------------------------
+
+ladjust_bury_coeff = .true.
+
+parm_scalelen_vals = 0.8, 2.8, 3.6, 3.8
