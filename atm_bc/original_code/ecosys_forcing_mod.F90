@@ -145,10 +145,12 @@ module ecosys_forcing_mod
   character(char_len) :: dust_flux_source             ! option for atmospheric dust deposition
   type(tracer_read)   :: dust_flux_input              ! namelist input for dust_flux
   character(char_len) :: iron_flux_source             ! option for atmospheric iron deposition
+  character(char_len) :: blackcarbonflux_source        ! option for black carbon deposition
   real(r8)            :: dust_ratio_thres             ! coarse/fine dust ratio threshold, used in iron_flux_source=='driver-derived' computation
   real(r8)            :: fe_bioavail_frac_offset
   real(r8)            :: dust_ratio_to_fe_bioavail_frac_r
   type(tracer_read)   :: iron_flux_input              ! namelist input for iron_flux
+  type(tracer_read)   :: blackcarbonflux_input         ! namelist input for black carbon flux
   type(tracer_read)   :: fesedflux_input              ! namelist input for fesedflux
   type(tracer_read)   :: feventflux_input             ! namelist input for feventflux
   character(char_len) :: o2_consumption_scalef_opt    ! option for specification of o2_consumption_scalef
@@ -233,6 +235,7 @@ module ecosys_forcing_mod
   ! *_file_loc%DATA points to that memory.
   type(forcing_monthly_every_ts), target :: dust_flux_file_loc
   type(forcing_monthly_every_ts), target :: iron_flux_file_loc
+  type(forcing_monthly_every_ts), target :: blackcarbonflux_file_loc
   type(forcing_monthly_every_ts), target :: fice_file_loc
   type(forcing_monthly_every_ts), target :: xkw_file_loc
   type(forcing_monthly_every_ts), target :: ap_file_loc
@@ -257,6 +260,7 @@ module ecosys_forcing_mod
   integer(int_kind) :: dust_dep_ind = 0, &
                        Fe_dep_ind   = 0, &
                        bc_dep_ind   = 0, &
+                       blackcarbon_dep_ind = 0, &
                        box_atm_co2_ind     = 0, &
                        box_atm_co2_dup_ind = 0, &
                        ifrac_ind    = 0, &
@@ -379,6 +383,7 @@ contains
 
     namelist /ecosys_forcing_data_nml/                                        &
          dust_flux_source, dust_flux_input, iron_flux_source,                 &
+         blackcarbonflux_source, blackcarbonflux_input,                       &
          dust_ratio_thres, fe_bioavail_frac_offset, dust_ratio_to_fe_bioavail_frac_r, &
          iron_flux_input, fesedflux_input, feventflux_input,                  &
          o2_consumption_scalef_opt, o2_consumption_scalef_const,              &
@@ -430,10 +435,12 @@ contains
     dust_flux_source             = 'driver'
     call set_defaults_tracer_read(dust_flux_input, file_varname='dust_flux')
     iron_flux_source             = 'driver-derived'
+    blackcarbonflux_source        = 'driver-derived'
     dust_ratio_thres             = 55.0_r8
     fe_bioavail_frac_offset      = 0.01_r8
     dust_ratio_to_fe_bioavail_frac_r = 170.0_r8
     call set_defaults_tracer_read(iron_flux_input, file_varname='iron_flux')
+    call set_defaults_tracer_read(blackcarbonflux_input, file_varname='blackcarbonflux')
     call set_defaults_tracer_read(fesedflux_input, file_varname='FESEDFLUXIN')
     call set_defaults_tracer_read(feventflux_input, file_varname='FESEDFLUXIN')
     o2_consumption_scalef_opt   = 'const'
@@ -624,6 +631,7 @@ contains
     ap_file_loc%input               = gas_flux_ap
     dust_flux_file_loc%input        = dust_flux_input
     iron_flux_file_loc%input        = iron_flux_input
+    blackcarbonflux_file_loc%input  = blackcarbonflux_input
     nox_flux_monthly_file_loc%input = nox_flux_monthly_input
     nhy_flux_monthly_file_loc%input = nhy_flux_monthly_input
 
@@ -789,6 +797,26 @@ contains
           else
             write(err_msg, "(A,1X,A)") trim(iron_flux_source),                &
                  'is not a valid option for iron_flux_source'
+            call document(subname, err_msg)
+            call exit_POP(sigAbort, 'Stopping in ' // subname)
+          end if
+
+        case ('Black Carbon Flux')
+          if (trim(blackcarbonflux_source).eq.'driver-derived') then
+            blackcarbon_dep_ind = n
+            call surface_flux_forcings(n)%add_forcing_field(field_source='internal', &
+                 marbl_varname=marbl_varname, field_units=units,                      &
+                 driver_varname='BLACK_CARBON_FLUX', rank=2, id=n)
+          else if (trim(blackcarbonflux_source).eq.'monthly-calendar') then
+            file_details => blackcarbonflux_file_loc
+            call init_monthly_surface_flux_forcing_metadata(file_details)
+            call surface_flux_forcings(n)%add_forcing_field(                          &
+                 field_source='POP monthly calendar',                                 &
+                 marbl_varname=marbl_varname, field_units=units,                      &
+                 forcing_calendar_name=file_details, rank=2, id=n)
+          else
+            write(err_msg, "(A,1X,A)") trim(blackcarbonflux_source),          &
+                 'is not a valid option for blackcarbonflux_source'
             call document(subname, err_msg)
             call exit_POP(sigAbort, 'Stopping in ' // subname)
           end if
@@ -1994,6 +2022,12 @@ contains
 
                    ! convert to nmol/cm^2/s
                    forcing_field%field_0d(:,:,iblock) = (1.0e9_r8 / molw_Fe) * forcing_field%field_0d(:,:,iblock)
+
+                else if (index == blackcarbon_dep_ind) then
+                   ! Sum atmospheric and sea-ice black carbon deposition
+                   ! (g C/cm^2/s), then convert to nmol C/cm^2/s.
+                   forcing_field%field_0d(:,:,iblock) = (1.0e9_r8 / 12.01_r8) * &
+                        (atm_black_carbon_flux(:,:,iblock) + seaice_black_carbon_flux(:,:,iblock))
 
                 else if (index == u10sqr_ind) then
                    forcing_field%field_0d(:,:,iblock) = u10_sqr(:,:,iblock)
